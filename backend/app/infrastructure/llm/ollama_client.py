@@ -19,16 +19,19 @@ class OllamaClient(LLMClient):
         self._http_client = http_client or httpx.Client()
 
     def generate(self, *, system_prompt: str, user_message: str) -> str:
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_message},
+        ]
         payload = {
             "model": self.model_name,
-            "system": system_prompt,
-            "prompt": user_message,
+            "messages": messages,
             "stream": False,
         }
 
         try:
             response = self._http_client.post(
-                f"{self.base_url}/api/generate",
+                f"{self.base_url}/api/chat",
                 json=payload,
                 timeout=self.timeout_seconds,
             )
@@ -41,7 +44,7 @@ class OllamaClient(LLMClient):
             )
 
         data = response.json()
-        generated = data.get("response")
+        generated = data.get("message", {}).get("content")
         if not isinstance(generated, str):
             raise LLMUnavailableError(
                 message="Respuesta inválida del modelo local",
